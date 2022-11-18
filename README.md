@@ -6,6 +6,14 @@ The monitoring will stop as soon as the specified process exits.
 
 > Please note: the tool was implemented to support [On nginx client headers parsing](https://dmytro.sh/blog/on-nginx-client-headers-parsing/) blog post and probably has very little potential on its own. Or maybe it does — let me know.
 
+## Installation
+
+Simplest way to download and compile the tool would be:
+
+```bash
+go install github.com/kpumuk/psbench@latest
+```
+
 ## Usage
 
 ```text
