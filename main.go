@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/process"
@@ -100,15 +102,22 @@ func main() {
 		fmt.Printf("timestamp,pid,ppid,name,memory_rss,cpu\n")
 	}
 
-	for {
-		if mainPid > 0 {
-			_, err := process.NewProcess(mainPid)
-			if err != nil {
-				break
-			}
-		}
+	ticker := time.NewTicker(*waitDuration)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-		printProcessStats(startTime)
-		time.Sleep(*waitDuration)
+	for {
+		select {
+		case <-ticker.C:
+			if mainPid > 0 {
+				_, err := process.NewProcess(mainPid)
+				if err != nil {
+					break
+				}
+			}
+			printProcessStats(startTime)
+		case <-sigChan:
+			os.Exit(1)
+		}
 	}
 }
