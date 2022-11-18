@@ -16,6 +16,7 @@ var ppidFilter = flag.Int("ppid", 0, "filter processes by parent process pid")
 var waitDuration = flag.Duration("wait", time.Second, "how many seconds to sleep between iterations")
 var sum = flag.Bool("sum", true, "print only summary stats instead of per-process details")
 var format = flag.String("format", "text", "output format (one of text, json, csv)")
+var verbose = flag.Bool("verbose", false, "print verbose details")
 
 func formatProcess(timeOffset float64, pid, ppid int32, memporyRSS uint64, cpu float64, name string) {
 	switch *format {
@@ -105,19 +106,31 @@ func main() {
 	ticker := time.NewTicker(*waitDuration)
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	quit := make(chan bool, 1)
 
+	if *verbose {
+		_, _ = fmt.Fprintf(os.Stderr, "Starting process monitoring\n")
+	}
 	for {
 		select {
 		case <-ticker.C:
 			if mainPid > 0 {
 				_, err := process.NewProcess(mainPid)
 				if err != nil {
-					break
+					if *verbose {
+						_, _ = fmt.Fprintf(os.Stderr, "Process with pid %d died, exiting\n", mainPid)
+					}
+					quit <- true
 				}
 			}
 			printProcessStats(startTime)
 		case <-sigChan:
-			os.Exit(1)
+			if *verbose {
+				_, _ = fmt.Fprintf(os.Stderr, "Received termination signal, exiting\n")
+			}
+			quit <- true
+		case <-quit:
+			os.Exit(0)
 		}
 	}
 }
