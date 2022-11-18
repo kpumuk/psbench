@@ -1,13 +1,19 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
 	"github.com/shirou/gopsutil/v3/process"
 )
 
+var pidFilter = flag.Int("pid", 0, "filter processes by process pid")
+var ppidFilter = flag.Int("ppid", 0, "filter processes by parent process pid")
+
 func main() {
+	flag.Parse()
+
 	processes, err := process.Processes()
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Failed to fetch processes: %v\n", err)
@@ -15,10 +21,18 @@ func main() {
 	}
 
 	for _, p := range processes {
+		if *pidFilter > 0 && int(p.Pid) != *pidFilter {
+			continue
+		}
+
 		ppid, err := p.Ppid()
 		if err != nil {
 			continue
 		}
+		if *ppidFilter > 0 && (int(ppid) != *ppidFilter && int(p.Pid) != *ppidFilter) {
+			continue
+		}
+
 		name, err := p.Name()
 		if err != nil {
 			continue
