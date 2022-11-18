@@ -14,7 +14,9 @@ var ppidFilter = flag.Int("ppid", 0, "filter processes by parent process pid")
 var waitDuration = flag.Duration("wait", time.Second, "how many seconds to sleep between iterations")
 var sum = flag.Bool("sum", true, "print only summary stats instead of per-process details")
 
-func printProcessStats() {
+func printProcessStats(startTime time.Time) {
+	timeOffset := float64(time.Since(startTime)) / float64(time.Second)
+
 	processes, err := process.Processes()
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Failed to fetch processes: %v\n", err)
@@ -53,11 +55,11 @@ func printProcessStats() {
 				continue
 			}
 
-			fmt.Printf("%d\t%d\t%s\t%d\t%.2f\n", p.Pid, ppid, name, mem.RSS, cpu)
+			fmt.Printf("%d (%d) mem=%d cpu=%.2f name=%q\n", p.Pid, ppid, mem.RSS, cpu, name)
 		}
 	}
 
-	fmt.Printf("Total: %d\t%.2f\n", totalMemoryRSS, totalCPU)
+	fmt.Printf("Total %.06f: mem=%d cpu=%.2f\n", timeOffset, totalMemoryRSS, totalCPU)
 }
 
 func main() {
@@ -70,6 +72,7 @@ func main() {
 		mainPid = int32(*ppidFilter)
 	}
 
+	startTime := time.Now()
 	for {
 		if mainPid > 0 {
 			_, err := process.NewProcess(mainPid)
@@ -78,7 +81,7 @@ func main() {
 			}
 		}
 
-		printProcessStats()
+		printProcessStats(startTime)
 		time.Sleep(*waitDuration)
 	}
 }
