@@ -40,13 +40,21 @@ func formatSummary(timeOffset float64, totalMemoryRSS uint64, totalCPU float64) 
 	}
 }
 
-func printProcessStats(startTime time.Time) {
+func printProcessStats(startTime time.Time) (err error) {
 	timeOffset := float64(time.Since(startTime)) / float64(time.Second)
 
-	processes, err := process.Processes()
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Failed to fetch processes: %v\n", err)
-		os.Exit(1)
+	var processes []*process.Process
+	if *pidFilter > 0 {
+		proc, err := process.NewProcess(int32(*pidFilter))
+		if err != nil {
+			return err
+		}
+		processes = append(processes, proc)
+	} else {
+		processes, err = process.Processes()
+		if err != nil {
+			return err
+		}
 	}
 
 	var totalCPU float64
@@ -73,8 +81,6 @@ func printProcessStats(startTime time.Time) {
 			continue
 		}
 
-		totalCPU += cpu
-		totalMemoryRSS += mem.RSS
 		if !*sum {
 			name, err := p.Name()
 			if err != nil {
@@ -83,9 +89,13 @@ func printProcessStats(startTime time.Time) {
 
 			formatProcess(timeOffset, p.Pid, ppid, mem.RSS, cpu, name)
 		}
+
+		totalCPU += cpu
+		totalMemoryRSS += mem.RSS
 	}
 
 	formatSummary(timeOffset, totalMemoryRSS, totalCPU)
+	return nil
 }
 
 func checkProcess(pid int32) error {
@@ -127,7 +137,9 @@ func main() {
 			}
 			quit <- true
 		} else {
-			printProcessStats(startTime)
+			if err := printProcessStats(startTime); err != nil {
+				quit <- true
+			}
 		}
 	}
 
