@@ -120,20 +120,25 @@ func main() {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	quit := make(chan bool, 1)
 
+	printStats := func() {
+		if checkProcess(mainPid) != nil {
+			if *verbose {
+				_, _ = fmt.Fprintf(os.Stderr, "Process with pid %d died, exiting\n", mainPid)
+			}
+			quit <- true
+		} else {
+			printProcessStats(startTime)
+		}
+	}
+
 	if *verbose {
 		_, _ = fmt.Fprintf(os.Stderr, "Starting process monitoring\n")
 	}
+	printStats()
 	for {
 		select {
 		case <-ticker.C:
-			if checkProcess(mainPid) != nil {
-				if *verbose {
-					_, _ = fmt.Fprintf(os.Stderr, "Process with pid %d died, exiting\n", mainPid)
-				}
-				quit <- true
-			} else {
-				printProcessStats(startTime)
-			}
+			printStats()
 		case <-sigChan:
 			if *verbose {
 				_, _ = fmt.Fprintf(os.Stderr, "Received termination signal, exiting\n")
