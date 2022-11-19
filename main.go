@@ -13,6 +13,7 @@ import (
 
 var pidFilter = flag.Int("pid", 0, "filter processes by process pid")
 var ppidFilter = flag.Int("ppid", 0, "filter processes by parent process pid")
+var selfFilter = flag.Bool("self", false, "monitor psbench process")
 var waitDuration = flag.Duration("wait", time.Second, "how many seconds to sleep between iterations")
 var sum = flag.Bool("sum", true, "print only summary stats instead of per-process details")
 var format = flag.String("format", "text", "output format (one of text, json, csv)")
@@ -110,6 +111,10 @@ func checkProcess(pid int32) error {
 
 func main() {
 	flag.Parse()
+
+	if *selfFilter {
+		*pidFilter = os.Getpid()
+	}
 
 	var mainPid int32
 	if *pidFilter > 0 {

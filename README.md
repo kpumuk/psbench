@@ -24,6 +24,8 @@ Usage of psbench:
     	filter processes by process pid
   -ppid int
     	filter processes by parent process pid
+  -self
+    	monitor psbench process
   -sum
     	print only summary stats instead of per-process details (default true)
   -verbose
