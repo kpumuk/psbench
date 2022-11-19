@@ -88,6 +88,16 @@ func printProcessStats(startTime time.Time) {
 	formatSummary(timeOffset, totalMemoryRSS, totalCPU)
 }
 
+func checkProcess(pid int32) error {
+	if pid > 0 {
+		_, err := process.NewProcess(pid)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func main() {
 	flag.Parse()
 
@@ -104,6 +114,8 @@ func main() {
 	}
 
 	ticker := time.NewTicker(*waitDuration)
+	defer ticker.Stop()
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	quit := make(chan bool, 1)
@@ -114,16 +126,14 @@ func main() {
 	for {
 		select {
 		case <-ticker.C:
-			if mainPid > 0 {
-				_, err := process.NewProcess(mainPid)
-				if err != nil {
-					if *verbose {
-						_, _ = fmt.Fprintf(os.Stderr, "Process with pid %d died, exiting\n", mainPid)
-					}
-					quit <- true
+			if checkProcess(mainPid) != nil {
+				if *verbose {
+					_, _ = fmt.Fprintf(os.Stderr, "Process with pid %d died, exiting\n", mainPid)
 				}
+				quit <- true
+			} else {
+				printProcessStats(startTime)
 			}
-			printProcessStats(startTime)
 		case <-sigChan:
 			if *verbose {
 				_, _ = fmt.Fprintf(os.Stderr, "Received termination signal, exiting\n")
