@@ -133,18 +133,16 @@ func main() {
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	quit := make(chan bool, 1)
+	done := make(chan bool)
 
 	printStats := func() {
 		if checkProcess(mainPid) != nil {
 			if *verbose {
 				_, _ = fmt.Fprintf(os.Stderr, "Process with pid %d died, exiting\n", mainPid)
 			}
-			quit <- true
-		} else {
-			if err := printProcessStats(startTime); err != nil {
-				quit <- true
-			}
+			close(done)
+		} else if err := printProcessStats(startTime); err != nil {
+			close(done)
 		}
 	}
 
@@ -160,8 +158,8 @@ func main() {
 			if *verbose {
 				_, _ = fmt.Fprintf(os.Stderr, "Received termination signal, exiting\n")
 			}
-			quit <- true
-		case <-quit:
+			close(done)
+		case <-done:
 			os.Exit(0)
 		}
 	}
